@@ -1,4 +1,4 @@
-package emirc2tg
+package emi2t
 
 import (
 	"github.com/BurntSushi/toml"
