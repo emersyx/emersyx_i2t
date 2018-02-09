@@ -1,6 +1,6 @@
 # This is an example configuration for the emirc2tg processor.
 # The processor joins the IRC channel to the Telegram group of each "link" item.
-[[link]]
+[[links]]
 irc_gateway_id = "example_irc_id"
 irc_channel = "#emersyx"
 telegram_gateway_id = "example_telegram_id"
