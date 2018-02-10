@@ -4,8 +4,14 @@
 [[projects]]
   branch = "master"
   name = "emersyx.net/emersyx_apis"
-  packages = ["emcomapi"]
-  revision = "be2b61d027a937f05ee7dd2170c8028e9d131461"
+  packages = ["emcomapi","emircapi","emtgapi"]
+  revision = "64b47fb174f05530fbcb851265fda2fc8baa28f0"
+
+[[projects]]
+  branch = "master"
+  name = "emersyx.net/emersyx_log"
+  packages = ["emlog"]
+  revision = "9429657b411b6d0eb366a6659d90773bcb79f080"
 
 [[projects]]
   name = "github.com/BurntSushi/toml"
@@ -16,6 +22,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "592513f0e8da777b428d1ee96e082d49c4ba1ad6fcf7794652b8eded7607b38e"
+  inputs-digest = "774067ea0e1bdd38b8a695187e76911477d915874835a218bd467ac907eab937"
   solver-name = "gps-cdcl"
   solver-version = 1
