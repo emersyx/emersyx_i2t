@@ -6,6 +6,7 @@ import (
 	"emersyx.net/emersyx_apis/emtgapi"
 	"emersyx.net/emersyx_log/emlog"
 	"errors"
+	"fmt"
 )
 
 // i2tProcessor is the type which implements the functionality of the irc2tg processor. This struct implements the
@@ -53,10 +54,75 @@ func (proc *i2tProcessor) eventLoop() {
 	}
 }
 
+// toTelegram validates the IRC message and forwards it to the appropriate Telegram group, based on the contents of the
+// toml configuration file.
 func (proc *i2tProcessor) toTelegram(msg emircapi.Message) {
+	// we only care about PRIVMSG events
+	if msg.Command != emircapi.PRIVMSG {
+		return
+	}
+
+	// check if the message can/should be forwarded
+	link, ok := proc.findLink(msg.GetSourceIdentifier())
+	if ok == false {
+		proc.log.Errorln("received an IRC messages from an unlinked processor")
+		return
+	}
+	if msg.Parameters[0] != link.IRCChannel {
+		proc.log.Errorln("received an IRC messages from an unlinked channel")
+		return
+	}
+
+	// check if the destination Telegram gateway (still) exists
+	gw, err := proc.router.GetGateway(link.TelegramGatewayID)
+	if err != nil {
+		proc.log.Errorln(err.Error())
+		proc.log.Errorf(
+			"the Telegram ID \"%s\" is not registered with the router",
+			link.TelegramGatewayID,
+		)
+		return
+	}
+
+	// check if the gateway is a valid Telegram gateway
+	tggw, ok := gw.(emtgapi.TelegramGateway)
+	if ok == false {
+		proc.log.Errorf(
+			"the Telegram ID \"%s\" does not belong to an emtgapi.TelegramGateway instance\n",
+			link.TelegramGatewayID,
+		)
+		return
+	}
+
+	// configure the parameters for the Telegram API sendMessage method
+	params := tggw.NewTelegramParameters()
+	params.ChatID(link.TelegramGroup)
+	params.Text(fmt.Sprintf(
+		"*%s*: %s",
+		msg.Origin,
+		msg.Parameters[1],
+	))
+	params.ParseMode("Markdown")
+
+	// send the message
+	if _, err := tggw.SendMessage(params); err != nil {
+		proc.log.Errorln(err.Error())
+		proc.log.Errorln("an error occured while forwarding a message from IRC to Telegram")
+	}
 }
 
 func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
+}
+
+// findLink searches for the link specified in the toml configuration file which contains an identifier equal to the
+// given argument. If such a link is found, the the bool return value is true, otherwise it is false.
+func (proc *i2tProcessor) findLink(id string) (link, bool) {
+	for _, l := range proc.config.Links {
+		if l.IRCGatewayID == id || l.TelegramGatewayID == id {
+			return l, true
+		}
+	}
+	return link{}, false
 }
 
 // NewProcessor creates a new i2tProcessor instance, applies the options received as argument and validates it. If no
