@@ -9,7 +9,7 @@ type link struct {
 	IRCGatewayID      string `toml:"irc_gateway_id"`
 	IRCChannel        string `toml:"irc_channel"`
 	TelegramGatewayID string `toml:"telegram_gateway_id"`
-	TelegramGroup     int64  `toml:"telegram_group"`
+	TelegramGroup     string `toml:"telegram_group"`
 }
 
 // i2tConfig is the type which holds all configuration options stored in the toml file for i2tProcessor instances.

@@ -4,4 +4,4 @@
 irc_gateway_id = "example_irc_id"
 irc_channel = "#emersyx"
 telegram_gateway_id = "example_telegram_id"
-telegram_group = -1001140292730
+telegram_group = "-1001140292730"
