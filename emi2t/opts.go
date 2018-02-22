@@ -1,4 +1,4 @@
-package emi2t
+package main
 
 import (
 	"emersyx.net/emersyx_apis/emcomapi"
