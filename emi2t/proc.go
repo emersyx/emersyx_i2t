@@ -170,7 +170,7 @@ func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
 
 // findLinks searches for the links specified in the toml configuration file which contains an identifier equal to the
 // given argument. If such a link is found, the the bool return value is true, otherwise it is false.
-func (proc *i2tProcessor) findLinks(id string, ) []link {
+func (proc *i2tProcessor) findLinks(id string) []link {
 	links := make([]link, 1)
 	for _, l := range proc.config.Links {
 		if l.IRCGatewayID == id || l.TelegramGatewayID == id {
