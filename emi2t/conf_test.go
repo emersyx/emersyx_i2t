@@ -36,7 +36,7 @@ func TestParsing(t *testing.T) {
 		t.Fail()
 	}
 	if link.TelegramGroup != "-1001140292730" {
-		t.Log(fmt.Sprintf("invalid Telegram group, got \"%d\"", link.TelegramGroup))
+		t.Log(fmt.Sprintf("invalid Telegram group, got \"%s\"", link.TelegramGroup))
 		t.Fail()
 	}
 }
