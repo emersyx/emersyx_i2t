@@ -8,6 +8,7 @@ goget:
 	go get emersyx.net/emersyx_apis/emtgapi
 	go get emersyx.net/emersyx_log/emlog
 	go get github.com/BurntSushi/toml
+	go get github.com/golang/lint/golint
 
 .PHONY: test
 test: emi2t.so
