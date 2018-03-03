@@ -7,6 +7,7 @@ goget:
 	go get emersyx.net/emersyx_apis/emircapi
 	go get emersyx.net/emersyx_apis/emtgapi
 	go get emersyx.net/emersyx_log/emlog
+	go get github.com/BurntSushi/toml
 
 .PHONY: test
 test: emi2t.so
