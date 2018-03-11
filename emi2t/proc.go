@@ -40,6 +40,7 @@ func (proc *i2tProcessor) GetOutEventsChannel() <-chan emcomapi.Event {
 // sepparate goroutine.
 func (proc *i2tProcessor) eventLoop() {
 	for event := range proc.events {
+		proc.log.Debugf("event loop received new event of type %T\n", event)
 		switch cevent := event.(type) {
 		case emircapi.Message:
 			proc.toTelegram(cevent)
@@ -199,8 +200,10 @@ func NewProcessor(options ...func(emcomapi.Processor) error) (emcomapi.Processor
 	}
 
 	// start the event processing loop in a new goroutine
+	proc.log.Debugln("starting the emi2t event loop")
 	go proc.eventLoop()
 
+	proc.log.Debugf("emersyx i2t proccessor \"%s\" initialized\n", proc.identifier)
 	return proc, nil
 }
 

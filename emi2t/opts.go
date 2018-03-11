@@ -23,7 +23,7 @@ func (o i2tOptions) Logging(writer io.Writer) func(emcomapi.Processor) error {
 		cp := assertProcessor(p)
 		if len(cp.identifier) != 0 && cp.log == nil {
 			var err error
-			cp.log, err = emlog.NewEmersyxLogger(writer, cp.identifier, emlog.ELError)
+			cp.log, err = emlog.NewEmersyxLogger(writer, cp.identifier, emlog.ELDebug)
 			if err != nil {
 				return err
 			}
