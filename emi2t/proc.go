@@ -184,7 +184,15 @@ func (proc *i2tProcessor) findLinks(id string) []link {
 // NewProcessor creates a new i2tProcessor instance, applies the options received as argument and validates it. If no
 // errors occur, then the new instance is returned.
 func NewProcessor(options ...func(emcomapi.Processor) error) (emcomapi.Processor, error) {
+	var err error
+
 	proc := new(i2tProcessor)
+
+	// generate a bare logger, to be updated via options
+	proc.log, err = emlog.NewEmersyxLogger(nil, "", emlog.ELNone)
+	if err != nil {
+		return nil, errors.New("could not create a bare logger")
+	}
 
 	// apply the configuration options received as arguments
 	if err := applyOptions(proc, options...); err != nil {

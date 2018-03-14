@@ -2,7 +2,6 @@ package main
 
 import (
 	"emersyx.net/emersyx_apis/emcomapi"
-	"emersyx.net/emersyx_log/emlog"
 	"errors"
 	"io"
 )
@@ -10,24 +9,17 @@ import (
 // i2tOptions implements the emcomapi.ProcessorOptions interface. Each method returns a function, which applies a
 // specific configuration to a Processor object.
 type i2tOptions struct {
-	writer io.Writer
 }
 
-// Logging sets the io.Writer instance to write logging messages to.
-func (o i2tOptions) Logging(writer io.Writer) func(emcomapi.Processor) error {
-	o.writer = writer
+// Logging sets the io.Writer instance to write logging messages to and the verbosity level.
+func (o i2tOptions) Logging(writer io.Writer, level uint) func(emcomapi.Processor) error {
 	return func(p emcomapi.Processor) error {
 		if writer == nil {
 			return errors.New("writer argument cannot be nil")
 		}
 		cp := assertProcessor(p)
-		if len(cp.identifier) != 0 && cp.log == nil {
-			var err error
-			cp.log, err = emlog.NewEmersyxLogger(writer, cp.identifier, emlog.ELDebug)
-			if err != nil {
-				return err
-			}
-		}
+		cp.log.SetOutput(writer)
+		cp.log.SetLevel(level)
 		return nil
 	}
 }
@@ -40,13 +32,7 @@ func (o i2tOptions) Identifier(id string) func(emcomapi.Processor) error {
 		}
 		cp := assertProcessor(p)
 		cp.identifier = id
-		if o.writer != nil && cp.log == nil {
-			var err error
-			cp.log, err = emlog.NewEmersyxLogger(o.writer, cp.identifier, emlog.ELError)
-			if err != nil {
-				return err
-			}
-		}
+		cp.log.SetComponentID(id)
 		return nil
 	}
 }
