@@ -188,6 +188,9 @@ func NewProcessor(options ...func(emcomapi.Processor) error) (emcomapi.Processor
 
 	proc := new(i2tProcessor)
 
+	// create the events channel
+	proc.events = make(chan emcomapi.Event)
+
 	// generate a bare logger, to be updated via options
 	proc.log, err = emlog.NewEmersyxLogger(nil, "", emlog.ELNone)
 	if err != nil {
