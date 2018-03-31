@@ -13,11 +13,12 @@ import (
 // i2tProcessor is the type which implements the functionality of the irc2tg processor. This struct implements the
 // emcomapi.Processor interface.
 type i2tProcessor struct {
-	identifier string
-	events     chan emcomapi.Event
-	router     emcomapi.Router
-	config     i2tConfig
-	log        *emlog.EmersyxLogger
+	identifier     string
+	readyToForward bool
+	events         chan emcomapi.Event
+	router         emcomapi.Router
+	config         i2tConfig
+	log            *emlog.EmersyxLogger
 }
 
 // GetIdentifier returns the identifier of the processor.
@@ -25,15 +26,10 @@ func (proc *i2tProcessor) GetIdentifier() string {
 	return proc.identifier
 }
 
-// GetInEventsChannel returns the channel via which the Processor object receives Event objects. The channel is
+// GetEventsInChannel returns the channel via which the Processor object receives Event objects. The channel is
 // write-only and can not be read from.
-func (proc *i2tProcessor) GetInEventsChannel() chan<- emcomapi.Event {
+func (proc *i2tProcessor) GetEventsInChannel() chan<- emcomapi.Event {
 	return proc.events
-}
-
-// GetOutEventsChannel returns nil since the processor does not generate any events.
-func (proc *i2tProcessor) GetOutEventsChannel() <-chan emcomapi.Event {
-	return nil
 }
 
 // eventLoop starts an infinite loop in which events received from receptors are processed. This method is executed in a
@@ -42,10 +38,16 @@ func (proc *i2tProcessor) eventLoop() {
 	for event := range proc.events {
 		proc.log.Debugf("event loop received new event of type %T\n", event)
 		switch cevent := event.(type) {
+		case emcomapi.CoreEvent:
+			proc.processCoreEvent(cevent)
 		case emircapi.Message:
-			proc.toTelegram(cevent)
+			if proc.readyToForward {
+				proc.toTelegram(cevent)
+			}
 		case emtgapi.EUpdate:
-			proc.toIRC(cevent)
+			if proc.readyToForward {
+				proc.toIRC(cevent)
+			}
 		default:
 			proc.log.Errorf(
 				"processor %s received an unknown event type from receptor %s\n",
@@ -72,24 +74,8 @@ func (proc *i2tProcessor) toTelegram(msg emircapi.Message) {
 			return
 		}
 
-		// check if the destination Telegram gateway (still) exists
-		gw, err := proc.router.GetGateway(link.TelegramGatewayID)
-		if err != nil {
-			proc.log.Errorln(err.Error())
-			proc.log.Errorf(
-				"the Telegram gateway ID \"%s\" is not registered with the router",
-				link.TelegramGatewayID,
-			)
-			return
-		}
-
-		// check if the gateway is a valid Telegram gateway
-		tggw, ok := gw.(emtgapi.TelegramGateway)
-		if ok == false {
-			proc.log.Errorf(
-				"the Telegram gateway ID \"%s\" does not belong to an emtgapi.TelegramGateway instance\n",
-				link.TelegramGatewayID,
-			)
+		tggw := proc.getTelegramGateway(link.TelegramGatewayID)
+		if tggw == nil {
 			return
 		}
 
@@ -97,7 +83,7 @@ func (proc *i2tProcessor) toTelegram(msg emircapi.Message) {
 		params := tggw.NewTelegramParameters()
 		params.ChatID(link.TelegramGroup)
 		params.Text(fmt.Sprintf(
-			"*%s*: %s",
+			"*(irc) %s :* %s",
 			msg.Origin,
 			msg.Parameters[1],
 		))
@@ -109,6 +95,26 @@ func (proc *i2tProcessor) toTelegram(msg emircapi.Message) {
 			proc.log.Errorln("an error occured while forwarding a message from IRC to Telegram")
 		}
 	}
+}
+
+func (proc *i2tProcessor) getTelegramGateway(id string) emtgapi.TelegramGateway {
+	proc.log.Debugf("searching for the Telegram gateway with ID \"%s\"\n", id)
+	// check if the Telegram gateway (still) exists
+	gw, err := proc.router.GetGateway(id)
+	if err != nil {
+		proc.log.Errorln(err.Error())
+		proc.log.Errorf("the Telegram gateway ID \"%s\" is not registered with the router\n", id)
+		return nil
+	}
+
+	// check if the gateway is a valid Telegram gateway
+	tggw, ok := gw.(emtgapi.TelegramGateway)
+	if ok == false {
+		proc.log.Errorf("the Telegram gateway ID \"%s\" does not belong to an emtgapi.TelegramGateway instance\n", id)
+		return nil
+	}
+
+	return tggw
 }
 
 // toIRC validates the Telegram update and forwards the message to the appropriate IRC channel, based on the contents of
@@ -135,36 +141,84 @@ func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
 	links := proc.findLinks(eu.GetSourceIdentifier())
 	for _, link := range links {
 		// check if the message can/should be forwarded
+		proc.log.Debugf("received a Telegram message from chat ID %d\n", eu.Message.Chat.ID)
 		if strconv.FormatInt(eu.Message.Chat.ID, 10) != link.TelegramGroup {
-			proc.log.Errorln("received a Telegram messages from an unlinked (super)group")
-			continue
-		}
-
-		// check if the destination Telegram gateway (still) exists
-		gw, err := proc.router.GetGateway(link.IRCGatewayID)
-		if err != nil {
-			proc.log.Errorln(err.Error())
-			proc.log.Errorf(
-				"the IRC gateway ID \"%s\" is not registered with the router",
-				link.IRCGatewayID,
+			proc.log.Errorf("received a Telegram messages from an unlinked (super)group with chat ID %d, expected %s",
+				eu.Message.Chat.ID,
+				link.TelegramGroup,
 			)
 			continue
 		}
 
-		// check if the gateway is a valid IRC gateway
-		ircgw, ok := gw.(emircapi.IRCGateway)
-		if ok == false {
-			proc.log.Errorf(
-				"the IRC gateway ID \"%s\" does not belong to an emircapi.IRCGateway instance\n",
-				link.TelegramGatewayID,
-			)
-			continue
+		ircgw := proc.getIRCGateway(link.IRCGatewayID)
+		if ircgw == nil {
+			return
 		}
+
+		// retrieve the message of the sender
+		var sender string
+		if eu.Update.Message.From.Username != "" {
+			sender = eu.Update.Message.From.Username
+		} else {
+			sender = eu.Update.Message.From.FirstName
+			if eu.Update.Message.From.LastName != "" {
+				sender += " " + eu.Update.Message.From.LastName
+			}
+		}
+		sender = fmt.Sprintf("(tg) %s : ", sender)
 
 		// send the message
-		if err := ircgw.Privmsg(link.IRCChannel, eu.Message.Text); err != nil {
+		proc.log.Debugf("sending a PRIVMSG to the \"%s\" IRC channel\n", link.IRCChannel)
+		if err := ircgw.Privmsg(link.IRCChannel, sender+eu.Message.Text); err != nil {
 			proc.log.Errorln(err.Error())
 			proc.log.Errorln("an error occured while forwarding a message from Telegram to IRC")
+		}
+	}
+}
+
+func (proc *i2tProcessor) getIRCGateway(id string) emircapi.IRCGateway {
+	proc.log.Debugf("searching for the IRC gateway with ID \"%s\"\n", id)
+	// check if the destination Telegram gateway (still) exists
+	gw, err := proc.router.GetGateway(id)
+	if err != nil {
+		proc.log.Errorln(err.Error())
+		proc.log.Errorf("the IRC gateway ID \"%s\" is not registered with the router\n", id)
+		return nil
+	}
+
+	// check if the gateway is a valid IRC gateway
+	ircgw, ok := gw.(emircapi.IRCGateway)
+	if ok == false {
+		proc.log.Errorf("the IRC gateway ID \"%s\" does not belong to an emircapi.IRCGateway instance\n", id)
+		return nil
+	}
+
+	return ircgw
+}
+
+func (proc *i2tProcessor) processCoreEvent(ce emcomapi.CoreEvent) {
+	if ce.Type == emcomapi.CoreUpdate && ce.Status == emcomapi.ComponentsLoaded {
+		proc.log.Debugln("received update from emersyx core that all components have been loaded")
+		proc.joinIRCChannels()
+		proc.readyToForward = true
+	}
+}
+
+func (proc *i2tProcessor) joinIRCChannels() {
+	proc.log.Debugln("joining IRC channels via the gateways")
+	// each IRC gateway needs to join the specific #channel
+	for _, link := range proc.config.Links {
+		ircgw := proc.getIRCGateway(link.IRCGatewayID)
+		if ircgw == nil {
+			continue
+		}
+		proc.log.Debugf("joining IRC channel \"%s\" on gateway \"%s\"\n", link.IRCChannel, link.IRCGatewayID)
+		if err := ircgw.Join(link.IRCChannel); err != nil {
+			proc.log.Debugln(err.Error())
+			proc.log.Debugf(
+				"could not join IRC channel \"%s\" on gateway \"%s\"\n",
+				link.IRCChannel, link.IRCGatewayID,
+			)
 		}
 	}
 }
@@ -172,7 +226,7 @@ func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
 // findLinks searches for the links specified in the toml configuration file which contains an identifier equal to the
 // given argument. If such a link is found, the the bool return value is true, otherwise it is false.
 func (proc *i2tProcessor) findLinks(id string) []link {
-	links := make([]link, 1)
+	links := make([]link, 0)
 	for _, l := range proc.config.Links {
 		if l.IRCGatewayID == id || l.TelegramGatewayID == id {
 			links = append(links, l)
@@ -187,6 +241,9 @@ func NewProcessor(options ...func(emcomapi.Processor) error) (emcomapi.Processor
 	var err error
 
 	proc := new(i2tProcessor)
+
+	// initially not ready to forward messages
+	proc.readyToForward = false
 
 	// create the events channel
 	proc.events = make(chan emcomapi.Event)
