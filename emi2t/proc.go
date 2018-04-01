@@ -70,13 +70,12 @@ func (proc *i2tProcessor) toTelegram(msg emircapi.Message) {
 	for _, link := range links {
 		// check if the message can/should be forwarded
 		if msg.Parameters[0] != link.IRCChannel {
-			proc.log.Errorln("received an IRC messages from an unlinked channel")
-			return
+			continue
 		}
 
 		tggw := proc.getTelegramGateway(link.TelegramGatewayID)
 		if tggw == nil {
-			return
+			continue
 		}
 
 		// configure the parameters for the Telegram API sendMessage method
@@ -120,6 +119,12 @@ func (proc *i2tProcessor) getTelegramGateway(id string) emtgapi.TelegramGateway 
 // toIRC validates the Telegram update and forwards the message to the appropriate IRC channel, based on the contents of
 // the toml configuration file.
 func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
+	proc.log.Debugf(
+		"received a Telegram message from chat ID %d, username \"%s\"\n",
+		eu.Message.Chat.ID,
+		eu.Message.Chat.Username,
+	)
+
 	// validate the received message
 	if eu.Message == nil {
 		proc.log.Errorln("received a Telegram update which does not contain a message")
@@ -141,18 +146,14 @@ func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
 	links := proc.findLinks(eu.GetSourceIdentifier())
 	for _, link := range links {
 		// check if the message can/should be forwarded
-		proc.log.Debugf("received a Telegram message from chat ID %d\n", eu.Message.Chat.ID)
-		if strconv.FormatInt(eu.Message.Chat.ID, 10) != link.TelegramGroup {
-			proc.log.Errorf("received a Telegram messages from an unlinked (super)group with chat ID %d, expected %s",
-				eu.Message.Chat.ID,
-				link.TelegramGroup,
-			)
+		if strconv.FormatInt(eu.Message.Chat.ID, 10) != link.TelegramGroup &&
+			"@" + eu.Message.Chat.Username != link.TelegramGroup {
 			continue
 		}
 
 		ircgw := proc.getIRCGateway(link.IRCGatewayID)
 		if ircgw == nil {
-			return
+			continue
 		}
 
 		// retrieve the message of the sender
