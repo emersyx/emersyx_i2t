@@ -147,7 +147,7 @@ func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
 	for _, link := range links {
 		// check if the message can/should be forwarded
 		if strconv.FormatInt(eu.Message.Chat.ID, 10) != link.TelegramGroup &&
-			"@" + eu.Message.Chat.Username != link.TelegramGroup {
+			"@"+eu.Message.Chat.Username != link.TelegramGroup {
 			continue
 		}
 
