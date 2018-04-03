@@ -119,12 +119,6 @@ func (proc *i2tProcessor) getTelegramGateway(id string) emtgapi.TelegramGateway 
 // toIRC validates the Telegram update and forwards the message to the appropriate IRC channel, based on the contents of
 // the toml configuration file.
 func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
-	proc.log.Debugf(
-		"received a Telegram message from chat ID %d, username \"%s\"\n",
-		eu.Message.Chat.ID,
-		eu.Message.Chat.Username,
-	)
-
 	// validate the received message
 	if eu.Message == nil {
 		proc.log.Errorln("received a Telegram update which does not contain a message")
@@ -142,6 +136,12 @@ func (proc *i2tProcessor) toIRC(eu emtgapi.EUpdate) {
 		proc.log.Errorln("received a Telegram update with a message not from a group or supergroup")
 		return
 	}
+
+	proc.log.Debugf(
+		"received a Telegram message from chat ID %d, username \"%s\"\n",
+		eu.Message.Chat.ID,
+		eu.Message.Chat.Username,
+	)
 
 	links := proc.findLinks(eu.GetSourceIdentifier())
 	for _, link := range links {
