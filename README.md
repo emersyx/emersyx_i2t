@@ -1,8 +1,9 @@
 # emersyx_i2t [![Build Status][build-img]][build-url] [![Go Report Card][gorep-img]][gorep-url] [![GoDoc][godoc-img]][godoc-url]
 
-IRC to Telegram event processor for emersyx.
+This is an emersyx processor which forwards messages between IRC channels and Telegram groups. It acts as a traditional
+bridge between the two chat services.
 
-## Build
+## Usage
 
 Source files in `emi2t` provide the implementation of the go plugin. The plugin can be built by running `make`. The
 resulting `emi2t.so` file can then be used by emersyx core.
