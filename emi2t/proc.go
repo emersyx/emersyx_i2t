@@ -97,6 +97,8 @@ func (proc *i2tProcessor) toTelegram(msg ircapi.IRCMessage) {
 	}
 }
 
+// getTelegramGateway retrieves the peripheral with the specified identifier and verifies that it is of type
+// tgapi.TelegramGateway.
 func (proc *i2tProcessor) getTelegramGateway(id string) tgapi.TelegramGateway {
 	proc.log.Debugf("searching for the Telegram gateway with ID \"%s\"\n", id)
 	// check if the Telegram gateway (still) exists
@@ -183,20 +185,8 @@ func (proc *i2tProcessor) toIRC(eu tgapi.EUpdate) {
 	}
 }
 
-func isWhitespaceString(s string) bool {
-	if len(s) == 0 {
-		return true
-	}
-
-	for _, c := range s {
-		if c != ' ' && c != '\n' && c != '\t' {
-			return false
-		}
-	}
-
-	return true
-}
-
+// getIRCGateway retrieves the peripheral with the specified identifier and verifies that it is of type
+// ircapi.IRCGateway.
 func (proc *i2tProcessor) getIRCGateway(id string) ircapi.IRCGateway {
 	proc.log.Debugf("searching for the IRC gateway with ID \"%s\"\n", id)
 	// check if the destination Telegram gateway (still) exists
@@ -216,6 +206,21 @@ func (proc *i2tProcessor) getIRCGateway(id string) ircapi.IRCGateway {
 	return ircgw
 }
 
+// isWhitespaceString is a utility function which verifies whether the string given as argument contains only whitespace
+// characters (i.e. ' ', newlines and tabs).
+func isWhitespaceString(s string) bool {
+	if len(s) == 0 {
+		return true
+	}
+	for _, c := range s {
+		if c != ' ' && c != '\n' && c != '\t' {
+			return false
+		}
+	}
+	return true
+}
+
+// processCoreEvent is a function which processes events received from the emersyx core.
 func (proc *i2tProcessor) processCoreEvent(ce api.CoreEvent) {
 	if ce.Type == api.CoreUpdate && ce.Status == api.PeripheralsLoaded {
 		proc.log.Debugln("received update from emersyx core that all peripherals have been loaded")
@@ -224,6 +229,8 @@ func (proc *i2tProcessor) processCoreEvent(ce api.CoreEvent) {
 	}
 }
 
+// joinIRCChannels uses the IRC gateways specified in the toml configuration file to join the required IRC channels for
+// routing messages.
 func (proc *i2tProcessor) joinIRCChannels() {
 	proc.log.Debugln("joining IRC channels via the gateways")
 	// each IRC gateway needs to join the specific #channel

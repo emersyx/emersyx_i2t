@@ -3,6 +3,9 @@ emi2t.so: goget
 
 .PHONY: goget
 goget:
+	@go get emersyx.net/emersyx/api
+	@go get emersyx.net/emersyx/api/ircapi
+	@go get emersyx.net/emersyx/api/tgapi
 	@go get github.com/BurntSushi/toml
 	@go get github.com/golang/lint/golint
 
