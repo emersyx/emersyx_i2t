@@ -3,19 +3,24 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"os"
 	"testing"
 )
 
-var confFile = flag.String("conffile", "", "path to sample configuration fileto be used for testing purposes")
+var conffile = flag.String("conffile", "", "path to sample configuration fileto be used for testing purposes")
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
 func TestParsing(t *testing.T) {
-	var cfg i2tConfig
-	loadConfig(*confFile, &cfg)
+	cfg := new(i2tConfig)
+	if _, err := toml.DecodeFile(*conffile, cfg); err != nil {
+		t.Log(err.Error())
+		t.Log(fmt.Sprintf("could not decode the configuration file"))
+		t.Fail()
+	}
 
 	if len(cfg.Links) != 1 {
 		t.Log(fmt.Sprintf("expected 1 link in the config, got %d instead", len(cfg.Links)))
