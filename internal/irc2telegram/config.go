@@ -12,15 +12,15 @@ type link struct {
 	TelegramGroup     string `toml:"telegram_group"`
 }
 
-// i2tConfig is the type which holds all configuration options stored in the toml file for i2tProcessor instances.
-type i2tConfig struct {
+// config is the type which holds all configuration options stored in the toml file for processor instances.
+type config struct {
 	Links []link
 }
 
 // validate checks the values loaded from the toml configuration file. If any value is found to be invalid, then an
 // error is returned.
-func (cfg *i2tConfig) validate() error {
-	for _, link := range cfg.Links {
+func (c *config) validate() error {
+	for _, link := range c.Links {
 		if len(link.IRCGatewayID) == 0 {
 			return errors.New("IRC gateway ID cannot have 0 length")
 		}
@@ -37,8 +37,8 @@ func (cfg *i2tConfig) validate() error {
 	return nil
 }
 
-// apply sets the values loaded from the toml configuration file into the i2tProcessor object received as argument.
-func (cfg *i2tConfig) apply(proc *i2tProcessor) {
-	proc.links = make([]link, len(cfg.Links))
-	copy(proc.links, cfg.Links)
+// apply sets the values loaded from the toml configuration file into the processor object received as argument.
+func (c *config) apply(proc *processor) {
+	proc.links = make([]link, len(c.Links))
+	copy(proc.links, c.Links)
 }

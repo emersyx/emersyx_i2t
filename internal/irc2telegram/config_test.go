@@ -15,19 +15,19 @@ func TestMain(m *testing.M) {
 }
 
 func TestParsing(t *testing.T) {
-	cfg := new(i2tConfig)
-	if _, err := toml.DecodeFile(*conffile, cfg); err != nil {
+	c := new(config)
+	if _, err := toml.DecodeFile(*conffile, c); err != nil {
 		t.Log(err.Error())
 		t.Log(fmt.Sprintf("could not decode the configuration file"))
 		t.Fail()
 	}
 
-	if len(cfg.Links) != 1 {
-		t.Log(fmt.Sprintf("expected 1 link in the config, got %d instead", len(cfg.Links)))
+	if len(c.Links) != 1 {
+		t.Log(fmt.Sprintf("expected 1 link in the config, got %d instead", len(c.Links)))
 		t.Fail()
 	}
 
-	link := cfg.Links[0]
+	link := c.Links[0]
 	if link.IRCGatewayID != "example_irc_id" {
 		t.Log(fmt.Sprintf("invalid IRC gateway ID, got \"%s\"", link.IRCGatewayID))
 		t.Fail()

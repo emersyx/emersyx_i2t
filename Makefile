@@ -1,18 +1,13 @@
-emi2t.so: goget
-	@go build -buildmode=plugin -o emi2t.so emi2t/*
-
-.PHONY: goget
-goget:
-	@go get emersyx.net/emersyx/api
-	@go get emersyx.net/emersyx/api/ircapi
-	@go get emersyx.net/emersyx/api/tgapi
-	@go get github.com/BurntSushi/toml
-	@go get github.com/golang/lint/golint
+emersyx-irc2telegram.so:
+	@go build -buildmode=plugin -o emersyx-irc2telegram.so internal/irc2telegram/*
 
 .PHONY: test
-test: emi2t.so
-	@echo "Running the tests with gofmt, go vet and golint..."
-	@test -z $(shell gofmt -s -l emi2t/*.go)
+test: emersyx-irc2telegram.so
+	@echo "Running the tests with gofmt..."
+	@test -z $(shell gofmt -s -l internal/irc2telegram/*.go)
+	@echo "Running the tests with go vet..."
 	@go vet ./...
+	@echo "Running the tests with golint..."
 	@golint -set_exit_status $(shell go list ./...)
-	@cd emi2t; go test -v -conffile ../config.toml
+	@echo "Running the unit tests..."
+	@cd internal/irc2telegram; go test -v -conffile ../../config/config-template.toml
