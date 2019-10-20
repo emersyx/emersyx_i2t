@@ -1,9 +1,9 @@
 package main
 
 import (
-	"emersyx.net/emersyx/pkg/api"
-	"emersyx.net/emersyx/pkg/api/irc"
-	"emersyx.net/emersyx/pkg/api/telegram"
+	"emersyx.net/common/pkg/api"
+	"emersyx.net/common/pkg/api/irc"
+	"emersyx.net/common/pkg/api/telegram"
 	"errors"
 	"fmt"
 	"github.com/BurntSushi/toml"
